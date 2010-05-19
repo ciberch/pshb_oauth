@@ -1,0 +1,2 @@
+This is a generic version of PubSubHubbub which uses OAuth 2.0 for authenticating
+the subscriber and supports geenric formats of data.
