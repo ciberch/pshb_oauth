@@ -5,3 +5,6 @@ This is a generic version of PubSubHubbub which
 3- Supports data in any format including JSON
 4- Supports more synchronization changes than those which can be supported with Atom and POST
 -- Includes PUT for replacing a resource and DELETE for asking that the resource gets deleted
+-- Also includes the ability to specify different end points which receive DELETE notifications and PUT notifications
+
+Motivation: http://montrics.blogspot.com/2010/05/facebooks-realtime-updates-use-cases.html
