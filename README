@@ -1,4 +1,4 @@
-This is a generic version of PubSubHubbub which 
+This is a proposal for a generic version of PubSubHubbub which 
 
 1- Supports the use of OAuth 2.0 for authenticating the subscriber and publisher.
 2- Moves discovery of the hub to the HTTP layer by making it an HTTP Header
