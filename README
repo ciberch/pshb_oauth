@@ -1,8 +1,9 @@
 This is a generic version of PubSubHubbub which 
 
-1- Supports the use of OAuth 2.0 for authenticating the subscriber.
-2- Moves discovery of the hub to the HTTP layer by making it an HTTP Header
-3- Supports data in any format including JSON
+1- Supports the use of OAuth 2.0 for authenticating the subscriber and publisher.
+2- Moves discovery of the hub to the HTTP layer by making it an HTTP Header using Web Linking
+-- Leaves backwards compatibility for existing discovery mechanism.
+3- Supports data in any arbitrary format including JSON
 4- Supports more synchronization changes than those which can be supported with Atom and POST
 -- Includes PUT for replacing a resource and DELETE for asking that the resource gets deleted
 -- Also includes the ability to specify different end points which receive DELETE notifications and PUT notifications
