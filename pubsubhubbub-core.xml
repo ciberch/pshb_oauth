@@ -53,8 +53,15 @@
         <email>mart@degeneration.co.uk</email>
       </address>
     </author>
-    
-    <date day="14" month="May" year="2010" />
+
+   <author fullname="Monica Keller" initials="M." surname="Keller">
+      <organization>Facebook Inc.</organization>
+
+      <address>
+        <email>monica.keller@gmail.com</email>
+      </address>
+    </author>
+    <date day="19" month="May" year="2010" />
 
     <abstract>
       <t>An open, simple, web-scale pubsub protocol, along with an open source
@@ -73,20 +80,17 @@
         subscription to any resource with a URL.
         This was done to provide realtime notifications of changes to resources.
         In addition, notifications now support specifying the type of operation
-        needed to reflect the synhronization change such as append, replace
-        or delete. This is done by selecting the corresponding http method:
+        needed to reflect the synchronization change such as append, replace
+        or delete. This is done by selecting the corresponding HTTP method:
         POST, PUT or DELETE.
         Also in version 0.4 we are adding support for authenticated subscriptions
         and an arbitrarily formatted payload so that for example, simple JSON
         endpoints can continue using the same format.</t>
 
-      <t>We offer this spec in hopes that it fills a need or at least advances
-      the state of the discussion in the pubsub space. Polling sucks. We think
-      a decentralized pubsub layer is a fundamental, missing layer in the
-      Internet architecture today and its existence, more than just enabling
-      the obvious lower latency feed readers, would enable many cool
-      applications, most of which we can't even imagine. But we're looking
-      forward to decentralized social networking.</t>
+      <t>We offer this spec in hopes that it allows secure synchronization
+      of independent respositories of data in realtime to make the web more
+      open, relevant and connected.
+      </t>
       
     </abstract>
   </front>
@@ -205,7 +209,7 @@
       entries follow.</t>
       
       <t>For Service Providers which act as a publishing platform for their users
-        and applications these are considered specialized hubs.
+        and applications, these are considered specialized hubs.
         These specialized hubs will require an authenticated and full 
         notification of changes. The mechanics of how this is done are outside
         the scope of this spec.
@@ -615,6 +619,10 @@
             <t hangText="hub.url">REQUIRED. The topic URL of the topic that
             has been updated. This field may be repeated to indicate multiple
             topics that have been updated.</t>
+
+            <t hangText="oauth_token">OPTIONAL if the Hub requires that the
+            author and content generator are identified prior to granting
+            distribution access and/or to provide access control. </t>
           </list></t>
 
         <t>The new content notification is a signal to the hub that there is
@@ -662,8 +670,9 @@ User-Agent: MyHub (+http://hub.example.com; 26 subscribers)
         content has changed, the hub MUST send information about the changes
         to each of the subscribers to the topic (<xref
         target="contentdistribution"></xref>). Hubs MUST consider new feed
-        entries, updated entries, or changes to the surrounding feed document
-        as significant content changes that require content distribution.</t>
+        entries, updated entries, deleted entries or changes to the surrounding
+        feed document as significant content changes that require content
+        distribution.</t>
       </section>
 
       <section anchor="contentdistribution" title="Content Distribution">

@@ -1,0 +1,14 @@
+PubSubHubbub Generalization for Social Service Providers
+=========================================================
+If we define a Social Service Provider as a provider of user information which
+enforces authorization to user's resources according to their privacy settings,
+then we have the following three use cases.
+
+- I as a Service Provider only support authenticated subscriptions so I know
+that the Consumer will adhere to certain policies and has the user's permission.
+- I as a Consumer wanting to synchronize my copy of the data want to be able
+to get notified regardless of data type. This means we need to model all
+resources not just feeds.
+- I as a Service Provider need to syndicate deletions of data from Subscribers
+and replacements.
+- I as a Consumer want a more compact and simple format than Atom.
