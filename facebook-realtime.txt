@@ -1,0 +1,157 @@
+Introduction
+----
+The [Graph API](./) supports real-time updates to enable your application using Facebook to subscribe to changes in data from Facebook.  Your application caches data and receives updates, rather than polling Facebook’s servers.  Caching data and using this API can improve the reliability of your application and decrease its load times.
+
+Whenever a subscribed change occurs, Facebook makes an HTTP <code>POST</code> request to an endpoint you specify with a list of changes.  A real-time server will generally send you notification of the change within a couple of minutes of its occurrence.
+
+Here are the steps to set up a subscription:
+
+1. Set up an endpoint URL that receives both HTTP `GET` (for subscription verification) and `POST` (for actual change data) requests from Facebook. 
+2. Make a `POST` to the graph API url `http://graph.facebook.com/<app-id>/subscriptions` to subscribe, and be ready to handle the verification request.
+
+---
+
+## Objects
+
+You can currently subscribe to updates for these types of objects:
+
+* [user](/docs/reference/api/user) – Get notifications about particular fields and connections corresponding to user nodes in the [Graph API](./).
+* [permissions](/docs/reference/fql/permissions) – Get notifications when your users change the permissions they afford your applications.  The fields are like those in the corresponding FQL table.
+* errors - Get notifications about errors that Facebook gets from your application server when it sends a request.  Subscribe to the "canvas" field to get these.
+
+Note: All properties on user object can be subscribed, but not all connections in user object can be subscribed at this time. Here are the list of connections that cannot be subscribed yet:
+
+home, tagged, posts, likes, photos, albums, videos, groups, likes, notes, events, inbox, outbox, updates
+
+We will add support for those connections in the coming days. If you are interested, please check back on this page at later time for updates.
+
+---
+
+## Subscription APIs 
+
+There are three things you can do by sending a request to
+<code>http://graph.facebook.com/&lt;app-id&gt;/subscriptions?access_token=...</code>
+
+The distinguishing difference among them is simply whether you send an HTTP <code>POST</code>, <code>GET</code>, or <code>DELETE</code> request.
+
+- Add or modify a subscription (<code>POST</code>)
+- List each of your subscribed objects and their subscribed fields (<code>GET</code>)
+- Delete subscriptions (<code>DELETE</code>)
+
+In all cases, you must send an [OAuth](/docs/authentication/) access_token, obtained using your Application Id (app-id) and your application secret (app-secret):
+
+<code>https://graph.facebook.com/oauth/access_token?client_id=&lt;app-id&gt;&amp;client_secret=&lt;app-secret&gt;&amp;type=client_cred</code>
+
+### Add or Modify a Subscription
+Once your callback URL has been verified, doing a POST adds or updates a subscription for the specified object. An application can only have one subscription for each object type. If the specified object is already subscribed for this app, then that existing subscription is changed.  
+
+* <code>object</code> - The type of the object to monitor, e.g. “user” or “permissions”.  You will monitor all objects of that type; for example, all users of your application.  
+* <code>fields</code> - A comma-separated list. This is a list of properties or connections on the specified object. For example, to monitor changes to user's name, picture, friends, and News Feed, you would specify “name,picture,friends,feed” 
+* <code>callback_url</code> - A callback URL to which Facebook will post subscription updates.
+* <code>verify_token</code> - A subscriber-provided opaque token that will be echoed back in the verification request to assist the subscriber in identifying which subscription request is being verified. If this is not included, no token will be included in the verification request. This is from the PubSubHubbub spec.
+
+### List Subscriptions
+Doing a GET returns JSON-encoded content that lists your subscriptions, up to one per object type.
+
+    [
+    {
+        "object": "user",
+        "callback_url": "http://www.xyz.com/sub_endpoint?xyz_token=123",
+        "fields": ["email", "friends", "name", "picture"],
+        "active": true
+    },
+    {
+        "object": "permissions",
+        "callback_url": "http://www.xyz.com/sub_endpoint?xyz_token=123",
+        "fields": ["email", "read_stream"],
+	"active": true
+    },
+    {
+        "object": "errors",
+        "callback_url": "http://www.otherdomain.com/sub_endpoint?xyz_token=456",
+        "fields": ["canvas"],
+        "active": true
+    }
+    ]
+
+### Delete Subscriptions
+
+Sending a <code>DELETE</code> request deletes all of your subscriptions.  If you specify an <code>object</code> parameter, it will only delete the corresponding subscription.
+
+---
+
+## Your Callback Server
+
+Your callback server must handle two types of requests.
+
+Facebook servers will make a single HTTP <code>GET</code> to your callback URL when you try to add or modify a subscription. After a successful subscription, Facebook servers will notify your server of changes by issuing HTTP <code>POST</code> requests to the same URL.
+
+### Subscription Verification
+
+Before subscription addition/modification can complete, Facebook servers will make an HTTP GET to your callback URL with the following parameters:
+
+* <code>hub.mode</code> - The string <code>subscribe</code> is passed in this parameter
+* <code>hub.challenge</code> - A random string
+* <code>hub.verify_token</code> - The <code>verify_token</code> value you passed to Facebook
+
+The end point should first verify the <code>verify_token</code> value is what you passed to Facebook, then return the <code>hub.challenge</code> value.  This verification technique prevents malicious apps from using the real-time feature as tool for distributed denial-of-service (DDoS) attacks.
+
+*Note for PHP developers: In PHP, dots and spaces in query parameter names are converted to underscores automatically. Therefore, you should access these parameters as $_GET["hub_mode"],$_GET["hub_challenge"] and $_GET["hub_verify_token"] if you are writing your callback endpoint in PHP. See [this note in the PHP language manual](http://www.php.net/manual/en/language.variables.external.php).*
+
+### Change Notifications
+
+When data changes, and there is a valid subscription, Facebook servers will make an HTTP POST request to the callback_url you specified. The request will have content type of <code>application/json</code>; the body will be a JSON-encoded string containing one or more changes. 
+
+Here is one example <code>user</code> object subscription:
+
+    {
+    "object": "user",
+    "entry": 
+    [
+        {
+            "uid": 1335845740,
+            "changed_fields": 
+            [
+                "name",
+                "picture"
+            ],
+           "time": 232323
+        },
+        {
+            "uid": 1234,
+            "changed_fields": 
+            [
+                "friends"
+            ],
+           "time": 232325
+        }
+    ]
+    }
+
+Note that this does not include the actual data values; to obtain those, you can request them as normal, subject to the usual privacy restrictions.  For data that you have access to any time, you may wish to query for that data immediately so that requesting it does not slow down load times when the user returns to your application.
+
+Facebook aggregates changes and sends batched updates every 5 seconds or when number of unsent changes exceeds 1000, so your server(s) should be set up to handle this level of load.
+
+If a change notification to your server fails, Facebook will retry again immediately, then a few times more, with decreasing frequency, over the next 24 hours.
+
+
+### Other Examples
+Here's what the data returned from an errors subscription might look like:
+
+    {
+    "i":1234,
+    "o":"errors",
+    "u":4,
+    "f":["canvas"],
+    "d":{
+        "url":"http:\/\/www.example.com",
+        "suf":"onethefarm\/",
+        "e":"HTTPErrorException",
+        "c":"500"
+        }
+     }
+### Sample Implementations
+You can find sample codes at this [github location](http://github.com/facebook/real-time/blob/master/samples/).
+
+## Questions?
+If you have questions or need help with this API, please post it to [this real-time updates topic](http://forum.developers.facebook.com/viewtopic.php?id=56610). We are actively monitoring that thread and will respond quickly.
