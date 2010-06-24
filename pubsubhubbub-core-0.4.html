@@ -148,7 +148,7 @@
 <tr><td class="header">&nbsp;</td><td class="header">Six Apart Ltd.</td></tr>
 <tr><td class="header">&nbsp;</td><td class="header">M. Keller</td></tr>
 <tr><td class="header">&nbsp;</td><td class="header">Facebook Inc.</td></tr>
-<tr><td class="header">&nbsp;</td><td class="header">May 19, 2010</td></tr>
+<tr><td class="header">&nbsp;</td><td class="header">June 18, 2010</td></tr>
 </table></td></tr></table>
 <h1><br />PubSubHubbub Core 0.4 -- Working Draft</h1>
 
@@ -168,17 +168,17 @@
 </p>
 <p>In version 0.4 we have generalized the specification to support
         subscription to any resource with a URL.
-        This was done to provide realtime notifications of changes to resources.
+        This was done to provide real-time notifications of changes to resources.
         In addition, notifications now support specifying the type of operation
         needed to reflect the synchronization change such as append, replace
-        or delete. This is done by selecting the corresponding HTTP method:
-        POST, PUT or DELETE.
+        or delete. This is done by having the hub more granularly convey the response from 
+        the publisher for the resource.
         Also in version 0.4 we are adding support for authenticated subscriptions
         and an arbitrarily formatted payload so that for example, simple JSON
         endpoints can continue using the same format.
 </p>
 <p>We offer this spec in hopes that it allows secure synchronization
-      of independent respositories of data in realtime to make the web more
+      of independent repositories of data in realtime to make the web more
       open, relevant and connected.
       
 </p><a name="toc"></a><br /><hr />
@@ -247,8 +247,17 @@ Definitions</h3>
 <blockquote class="text"><dl>
 <dt>Topic:</dt>
 <dd>A public or protected resource URL. The unit
-          to which one can subscribe to changes. This was previously referred 
-          to as the topic.
+          to which one can subscribe to changes. Topics can point to resources with any Content Type.
+</dd>
+<dt>Feed:</dt>
+<dd>A resource which is a list of items with unique 
+            identifiers, and last modified timestamp for each item. Feeds MAY 
+            contain the location of the hub.
+         Whether a resource is a Feed and where the hub is located will be determined 
+         based on the Content-Type header.
+         RSS(application/rss+xml), Atom(application/atom+xml) and 
+         JSON Activity Streams(application/stream+json) are examples of Feeds.
+         
 </dd>
 <dt>Hub (&quot;the hub&quot;):</dt>
 <dd>The server (<a class='info' href='#RFC3986'>URL<span> (</span><span class='info'>Berners-Lee, T., &ldquo;Uniform Resource Identifiers (URI): Generic Syntax,&rdquo; .</span><span>)</span></a> [RFC3986]) which implements both sides of this
@@ -281,7 +290,7 @@ Definitions</h3>
           notifications.
 </dd>
 <dt>Event:</dt>
-<dd>An event that causes updates to multiple
+<dd>An event that causes updates to potentially multiple
           topics. For each event that happens (e.g. "Brad posted to the Linux
           Community."), multiple topics could be affected (e.g. "Brad posted."
           and "Linux community has new post"). Publisher events cause topics
@@ -291,12 +300,12 @@ Definitions</h3>
 <dt>Notification:</dt>
 <dd>A payload describing how a topic's
           contents have changed. This difference (or "delta") is computed by
-          the hub and sent to all subscribers. If the notification is an 
-          append (HTTP POST).The format of the notification must contain the
-          list of items to append and therefore must be syndicated as an ordered list
-          using JSON Activity Streams, Atom or RSS feed served by the
-          publisher with only those entries present which are new or have
-          changed. The notification can be the result of a publisher telling
+          the hub and sent to all subscribers if and only if the topic is a Feed. 
+          The hub will only send the entries which are new or have changed. 
+          If the topic is not a Feed then it cannot be used to compute deltas and
+          the notification will contain the entire resource as if it was fetched directly
+          using the topic url.
+          The notification can be the result of a publisher telling
           the hub of an update, or the hub proactively polling a topic feed,
           perhaps for a subscriber subscribing to a topic that's not
           pubsub-aware. Note also that a notification to a subscriber can be a
@@ -336,7 +345,8 @@ High-level protocol flow</h3>
 <a name="rfc.section.4"></a><h3>4.&nbsp;
 Notification Details</h3>
 
-<p>If a publisher wants to use a generic hub then notification and source formats will be <a class='info' href='#RFC4287'>Atom<span> (</span><span class='info'>Nottingham, M., Ed. and R. Sayre, Ed., &ldquo;The Atom Syndication Format,&rdquo; .</span><span>)</span></a> [RFC4287] or <a class='info' href='#RSS20'>RSS<span> (</span><span class='info'>Winer, D., &ldquo;RSS 2.0,&rdquo; .</span><span>)</span></a> [RSS20] or
+<p>If the publisher's resources are feeds, then they should select a hub which 
+        supports their Feed Content Type. The well known Feed Content Types are: <a class='info' href='#RFC4287'>Atom<span> (</span><span class='info'>Nottingham, M., Ed. and R. Sayre, Ed., &ldquo;The Atom Syndication Format,&rdquo; .</span><span>)</span></a> [RFC4287] or <a class='info' href='#RSS20'>RSS<span> (</span><span class='info'>Winer, D., &ldquo;RSS 2.0,&rdquo; .</span><span>)</span></a> [RSS20] or
       <a class='info' href='#JSON_Activity_Stream'>JSON Activity Stream<span> (</span><span class='info'>, &ldquo;JSON Activity Stream (Draft),&rdquo; .</span><span>)</span></a> [JSON_Activity_Stream].
       The Publisher makes the decision as to include full body, truncated body, or
       meta data of most recent event(s). One of:
@@ -358,8 +368,9 @@ Notification Details</h3>
       like TCP SACK) MAY be provided as context. Some examples of Atom feed
       entries follow.
 </p>
-<p>For Service Providers which act as a publishing platform for their users
-        and applications, these are considered specialized hubs.
+<p>Publishers with content that cannot be syndicated publicly SHOULD 
+        utilize a hub which understands their authorization scheme. Typically these hubs are
+        Service Providers which support manual publishing by users specifying the privacy of their content.
         These specialized hubs will require an authenticated and full 
         notification of changes. The mechanics of how this is done are outside
         the scope of this spec.
@@ -376,11 +387,7 @@ Discovery</h3>
 <p>A potential subscriber initiates discovery by retrieving the resource to
       which it wants to subscribe. The <a class='info' href='#RFC2616'>HTTP<span> (</span><span class='info'>Fielding, R., Gettys, J., Mogul, J., Frystyk, H., Masinter, L., Leach, P., and T. Berners-Lee, &ldquo;Hypertext Transfer Protocol -- HTTP/1.1,&rdquo; .</span><span>)</span></a> [RFC2616] response 
       from the publisher MUST include the location of the hub if one is available.
-      The location of the hub MAY be transmitted in the <a class='info' href='#RFC2616'>HTTP<span> (</span><span class='info'>Fielding, R., Gettys, J., Mogul, J., Frystyk, H., Masinter, L., Leach, P., and T. Berners-Lee, &ldquo;Hypertext Transfer Protocol -- HTTP/1.1,&rdquo; .</span><span>)</span></a> [RFC2616] 
-      response header:  <tt>Content-Hub-Location</tt>
-</p>
-<p>
-      [TODO: Consider using <a class='info' href='#draft-nottingham-http-link-header-10'>Web Linking<span> (</span><span class='info'>, &ldquo;Web Linking (Draft),&rdquo; .</span><span>)</span></a> [draft&#8209;nottingham&#8209;http&#8209;link&#8209;header&#8209;10]
+      The location of the hub MAY be transmitted using <a class='info' href='#draft-nottingham-http-link-header-10'>Web Linking<span> (</span><span class='info'>, &ldquo;Web Linking (Draft),&rdquo; .</span><span>)</span></a> [draft&#8209;nottingham&#8209;http&#8209;link&#8209;header&#8209;10]
       
 <p>Example using HTTP headers to syndicate the hub for resource "http://www.asite.net/ciberch"
 </p>   
@@ -392,7 +399,7 @@ Discovery</h3>
 
           HTTP/1.1 200 OK
           Content-Type: application/json
-          Content-Hub-Location: https://www.nicehub.com/pshb_endpoint
+          Link:&lt;http://hub.company.com/&gt;;rel="hub"
           Date: Fri, 14 May 2010 20:54:17 GMT
           Content-Length: 268
 
@@ -405,7 +412,8 @@ Discovery</h3>
           }
 
 </pre></div>
-      or for backwards compatibility as a child of <tt>//atom:feed</tt>
+      or inside the document if the mime type supports including a hub. Examples of this
+      are Atom or RSS where the hub is transmitted as a child of <tt>//atom:feed</tt>
       or <tt>//rss:rss/channel</tt> an <tt>atom:link</tt> element whose <tt>rel</tt>
       attribute has the value <tt>hub</tt> and whose <tt>href</tt> attribute contains the hub's endpoint URL.
 
@@ -556,8 +564,9 @@ Subscriber Sends Subscription Request</h3>
             included in the verification request.
 </dd>
 <dt>oauth_token</dt>
-<dd>OPTIONAL. Use this field with <a class='info' href='#OAuth_2_0'>OAuth 2.0<span> (</span><span class='info'>, &ldquo;OAuth 2.0 Protocol (Draft),&rdquo; .</span><span>)</span></a> [OAuth_2_0] to transmit 
-            a hub-provided opaque token that will grant or deny access to the resource.
+<dd>OPTIONAL. Use this field with 
+            <a class='info' href='#OAuth_2_0'>OAuth 2.0<span> (</span><span class='info'>, &ldquo;OAuth 2.0 Protocol (Draft),&rdquo; .</span><span>)</span></a> [OAuth_2_0] to transmit a hub-provided 
+            opaque token that will grant or deny access to the resource.
 </dd>
 </dl></blockquote><p>
           
@@ -1130,4 +1139,3 @@ Specification Feedback</h3>
 <td class="author-text"><a href="mailto:monica.keller@gmail.com">monica.keller@gmail.com</a></td></tr>
 </table>
 </body></html>
-

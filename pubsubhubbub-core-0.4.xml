@@ -61,7 +61,7 @@
         <email>monica.keller@gmail.com</email>
       </address>
     </author>
-    <date day="19" month="May" year="2010" />
+    <date day="18" month="June" year="2010" />
 
     <abstract>
       <t>An open, simple, web-scale pubsub protocol, along with an open source
@@ -78,17 +78,17 @@
       
      <t>In version 0.4 we have generalized the specification to support
         subscription to any resource with a URL.
-        This was done to provide realtime notifications of changes to resources.
+        This was done to provide real-time notifications of changes to resources.
         In addition, notifications now support specifying the type of operation
         needed to reflect the synchronization change such as append, replace
-        or delete. This is done by selecting the corresponding HTTP method:
-        POST, PUT or DELETE.
+        or delete. This is done by having the hub more granularly convey the response from 
+        the publisher for the resource.
         Also in version 0.4 we are adding support for authenticated subscriptions
         and an arbitrarily formatted payload so that for example, simple JSON
         endpoints can continue using the same format.</t>
 
       <t>We offer this spec in hopes that it allows secure synchronization
-      of independent respositories of data in realtime to make the web more
+      of independent repositories of data in realtime to make the web more
       open, relevant and connected.
       </t>
       
@@ -107,9 +107,17 @@
     <section title="Definitions">
       <t><list style="hanging">
           <t hangText="Topic:">A public or protected resource URL. The unit
-          to which one can subscribe to changes. This was previously referred 
-          to as the topic.</t>
-
+          to which one can subscribe to changes. Topics can point to resources with any Content Type.</t>
+          
+          <t hangText="Feed:">A resource which is a list of items with unique 
+            identifiers, and last modified timestamp for each item. Feeds MAY 
+            contain the location of the hub.
+         Whether a resource is a Feed and where the hub is located will be determined 
+         based on the Content-Type header.
+         RSS(application/rss+xml), Atom(application/atom+xml) and 
+         JSON Activity Streams(application/stream+json) are examples of Feeds.
+         </t>
+             
           <t hangText="Hub (&quot;the hub&quot;):">The server (<xref
           target="RFC3986">URL</xref>) which implements both sides of this
           protocol. We have implemented this and are running a server at <eref
@@ -140,7 +148,7 @@
           target="RFC3986">URL</xref> at which a subscriber wishes to receive
           notifications.</t>
 
-          <t hangText="Event:">An event that causes updates to multiple
+          <t hangText="Event:">An event that causes updates to potentially multiple
           topics. For each event that happens (e.g. "Brad posted to the Linux
           Community."), multiple topics could be affected (e.g. "Brad posted."
           and "Linux community has new post"). Publisher events cause topics
@@ -149,12 +157,12 @@
 
           <t hangText="Notification:">A payload describing how a topic's
           contents have changed. This difference (or "delta") is computed by
-          the hub and sent to all subscribers. If the notification is an 
-          append (HTTP POST).The format of the notification must contain the
-          list of items to append and therefore must be syndicated as an ordered list
-          using JSON Activity Streams, Atom or RSS feed served by the
-          publisher with only those entries present which are new or have
-          changed. The notification can be the result of a publisher telling
+          the hub and sent to all subscribers if and only if the topic is a Feed. 
+          The hub will only send the entries which are new or have changed. 
+          If the topic is not a Feed then it cannot be used to compute deltas and
+          the notification will contain the entire resource as if it was fetched directly
+          using the topic url.
+          The notification can be the result of a publisher telling
           the hub of an update, or the hub proactively polling a topic feed,
           perhaps for a subscriber subscribing to a topic that's not
           pubsub-aware. Note also that a notification to a subscriber can be a
@@ -186,7 +194,8 @@
     </section>
 
     <section title="Notification Details">
-      <t>If a publisher wants to use a generic hub then notification and source formats will be <xref
+      <t>If the publisher's resources are feeds, then they should select a hub which 
+        supports their Feed Content Type. The well known Feed Content Types are: <xref
       target="RFC4287">Atom</xref> or <xref target="RSS20">RSS</xref> or
       <xref target="JSON_Activity_Stream">JSON Activity Stream</xref>.
       The Publisher makes the decision as to include full body, truncated body, or
@@ -208,8 +217,9 @@
       like TCP SACK) MAY be provided as context. Some examples of Atom feed
       entries follow.</t>
       
-      <t>For Service Providers which act as a publishing platform for their users
-        and applications, these are considered specialized hubs.
+      <t>Publishers with content that cannot be syndicated publicly SHOULD 
+        utilize a hub which understands their authorization scheme. Typically these hubs are
+        Service Providers which support manual publishing by users specifying the privacy of their content.
         These specialized hubs will require an authenticated and full 
         notification of changes. The mechanics of how this is done are outside
         the scope of this spec.
@@ -223,10 +233,7 @@
       <t>A potential subscriber initiates discovery by retrieving the resource to
       which it wants to subscribe. The <xref target="RFC2616">HTTP</xref> response 
       from the publisher MUST include the location of the hub if one is available.
-      The location of the hub MAY be transmitted in the <xref target="RFC2616">HTTP</xref> 
-      response header:  <spanx style="verb">Content-Hub-Location</spanx></t>
-      <t>
-      [TODO: Consider using <xref target="draft-nottingham-http-link-header-10">Web Linking</xref>
+      The location of the hub MAY be transmitted using <xref target="draft-nottingham-http-link-header-10">Web Linking</xref>
       <t>Example using HTTP headers to syndicate the hub for resource "http://www.asite.net/ciberch"</t>   
       <figure>
         <artwork>
@@ -237,7 +244,7 @@
           
           HTTP/1.1 200 OK
           Content-Type: application/json
-          Content-Hub-Location: https://www.nicehub.com/pshb_endpoint
+          Link:&lt;http://hub.company.com/&gt;;rel="hub" 
           Date: Fri, 14 May 2010 20:54:17 GMT
           Content-Length: 268
           
@@ -251,7 +258,8 @@
           
         </artwork>
       </figure>
-      or for backwards compatibility as a child of <spanx style="verb">//atom:feed</spanx>
+      or inside the document if the mime type supports including a hub. Examples of this
+      are Atom or RSS where the hub is transmitted as a child of <spanx style="verb">//atom:feed</spanx>
       or <spanx style="verb">//rss:rss/channel</spanx> an <spanx
       style="verb">atom:link</spanx> element whose <spanx style="verb">rel</spanx>
       attribute has the value <spanx style="verb">hub</spanx> and whose <spanx
@@ -394,8 +402,9 @@
             is being verified. If this is not included, no token will be
             included in the verification request.</t>
             
-            <t hangText="oauth_token">OPTIONAL. Use this field with <xref target="OAuth_2_0">OAuth 2.0</xref> to transmit 
-            a hub-provided opaque token that will grant or deny access to the resource.</t>
+          <t hangText="oauth_token">OPTIONAL. Use this field with 
+            <xref target="OAuth_2_0">OAuth 2.0</xref> to transmit a hub-provided 
+            opaque token that will grant or deny access to the resource.</t>
           </list>
           </t>
 
