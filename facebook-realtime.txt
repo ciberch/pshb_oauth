@@ -4,11 +4,6 @@ The [Graph API](./) supports real-time updates to enable your application using 
 
 Whenever a subscribed change occurs, Facebook makes an HTTP <code>POST</code> request to an endpoint you specify with a list of changes.  A real-time server will generally send you notification of the change within a couple of minutes of its occurrence.
 
-Here are the steps to set up a subscription:
-
-1. Set up an endpoint URL that receives both HTTP `GET` (for subscription verification) and `POST` (for actual change data) requests from Facebook. 
-2. Make a `POST` to the graph API url `http://graph.facebook.com/<app-id>/subscriptions` to subscribe, and be ready to handle the verification request.
-
 ---
 
 ## Objects
@@ -17,15 +12,18 @@ You can currently subscribe to updates for these types of objects:
 
 * [user](/docs/reference/api/user) – Get notifications about particular fields and connections corresponding to user nodes in the [Graph API](./).
 * [permissions](/docs/reference/fql/permissions) – Get notifications when your users change the permissions they afford your applications.  The fields are like those in the corresponding FQL table.
-* errors - Get notifications about errors that Facebook gets from your application server when it sends a request.  Subscribe to the "canvas" field to get these.
 
 Note: All properties on user object can be subscribed, but not all connections in user object can be subscribed at this time. Here are the list of connections that cannot be subscribed yet:
 
-home, tagged, posts, likes, photos, albums, videos, groups, likes, notes, events, inbox, outbox, updates
-
-We will add support for those connections in the coming days. If you are interested, please check back on this page at later time for updates.
+<code>home, tagged, posts, likes, photos, albums, videos, groups, likes, notes, events, inbox, outbox, updates</code>
 
 ---
+
+## Getting Started
+Here are the steps to set up a subscription:
+
+-Set up an endpoint URL that receives both HTTP `GET` (for subscription verification) and `POST` (for actual change data) requests from Facebook. 
+-Make a `POST` to the graph API url `http://graph.facebook.com/<app-id>/subscriptions` to subscribe, and be ready to handle the verification request.
 
 ## Subscription APIs 
 
@@ -49,6 +47,18 @@ Once your callback URL has been verified, doing a POST adds or updates a subscri
 * <code>fields</code> - A comma-separated list. This is a list of properties or connections on the specified object. For example, to monitor changes to user's name, picture, friends, and News Feed, you would specify “name,picture,friends,feed” 
 * <code>callback_url</code> - A callback URL to which Facebook will post subscription updates.
 * <code>verify_token</code> - A subscriber-provided opaque token that will be echoed back in the verification request to assist the subscriber in identifying which subscription request is being verified. If this is not included, no token will be included in the verification request. This is from the PubSubHubbub spec.
+
+#### Example: Creating a subscription
+<code>
+POST /APP_ID/subscriptions HTTP/1.1
+host: graph.facebook.com
+
+access_token=kawaiEJWUC2gLaanGfKy
+object=user
+fields=friends
+callback_url=http%2A%2F%2Fwww.spotify.com%2Fsubs
+verify_token=oh29hlq
+</code>
 
 ### List Subscriptions
 Doing a GET returns JSON-encoded content that lists your subscriptions, up to one per object type.
