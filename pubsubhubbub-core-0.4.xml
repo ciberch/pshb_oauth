@@ -61,7 +61,7 @@
         <email>monica.keller@gmail.com</email>
       </address>
     </author>
-    <date day="18" month="June" year="2010" />
+    <date day="24" month="June" year="2010" />
 
     <abstract>
       <t>An open, simple, web-scale pubsub protocol, along with an open source
